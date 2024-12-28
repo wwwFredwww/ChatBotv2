@@ -3,4 +3,5 @@ python-telegram-bot>=20.0
 requests>=2.0
 beautifulsoup4
 httpx>=0.23.0
+deep-translator>=1.8.0
 
