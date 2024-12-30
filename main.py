@@ -35,7 +35,25 @@ def translate_text(text, dest_language="ru"):
         print(f"Ошибка перевода: {e}")
         return "❌ Перевод временно недоступен."
 
-# Функция для получения последних новостей
+# # Функция для получения последних новостей
+# def get_latest_news(category="technology"):
+#     try:
+#         api_key = "5c576dc45ba04d9d9667093c7329705b"
+#         url = f"https://newsapi.org/v2/top-headlines?country=us&category={category}&apiKey={api_key}"
+#         response = requests.get(url)
+#         response.raise_for_status()
+#         data = response.json()
+#         if data.get("status") != "ok":
+#             print(f"Ошибка API: {data.get('message')}")
+#             return None
+#         return [article["title"] for article in data.get("articles", [])[:5]]
+#     except requests.exceptions.RequestException as e:
+#         print(f"Ошибка соединения: {e}")
+#         return None
+#     except Exception as e:
+#         print(f"Общая ошибка: {e}")
+#         return None
+
 def get_latest_news(category="technology"):
     try:
         api_key = "5c576dc45ba04d9d9667093c7329705b"
@@ -46,7 +64,17 @@ def get_latest_news(category="technology"):
         if data.get("status") != "ok":
             print(f"Ошибка API: {data.get('message')}")
             return None
-        return [article["title"] for article in data.get("articles", [])[:5]]
+
+        # Получаем список статей с заголовками, изображениями и URL
+        articles = data.get("articles", [])[:5]
+        return [
+            {
+                "title": article.get("title"),
+                "image": article.get("urlToImage"),
+                "url": article.get("url")
+            }
+            for article in articles
+        ]
     except requests.exceptions.RequestException as e:
         print(f"Ошибка соединения: {e}")
         return None
@@ -54,7 +82,46 @@ def get_latest_news(category="technology"):
         print(f"Общая ошибка: {e}")
         return None
 
-# Функция для обработки команды /news
+
+# # Функция для обработки команды /news
+# async def news(update, context):
+#     args = context.args
+#
+#     # Проверяем количество аргументов
+#     if len(args) > 2:
+#         await update.message.reply_text("❌ Слишком много аргументов. Формат: /news <категория> <язык>.")
+#         return
+#
+#     # Получаем категорию и язык
+#     category = args[0] if len(args) > 0 else "technology"
+#     language = args[1] if len(args) > 1 else "ru"
+#
+#     # Проверяем валидность категории
+#     valid_categories = ["business", "entertainment", "general", "health", "science", "sports", "technology"]
+#     if category not in valid_categories:
+#         await update.message.reply_text(
+#             "❌ Неверная категория. Используйте команду /categories для просмотра доступных категорий."
+#         )
+#         return
+#
+#     # Получаем новости
+#     news_list = get_latest_news(category)
+#     if not news_list:
+#         await update.message.reply_text("❌ Новости не найдены. Попробуйте позже.")
+#         return
+#
+#     # Переводим и отправляем новости
+#     try:
+#         translated_news = [translate_text(news, dest_language=language) for news in news_list]
+#         news_message = (
+#             f"📰 *Последние новости на {language.upper()} (категория: {category}):*\n\n"
+#             + "\n\n".join(f"🔹 {news}" for news in translated_news)
+#         )
+#         await update.message.reply_text(news_message, parse_mode="Markdown")
+#     except Exception as e:
+#         print(f"Ошибка обработки новостей: {e}")
+#         await update.message.reply_text("❌ Произошла ошибка при обработке новостей. Попробуйте позже.")
+
 async def news(update, context):
     args = context.args
 
@@ -81,17 +148,23 @@ async def news(update, context):
         await update.message.reply_text("❌ Новости не найдены. Попробуйте позже.")
         return
 
-    # Переводим и отправляем новости
+    # Переводим и отправляем новости с изображениями
     try:
-        translated_news = [translate_text(news, dest_language=language) for news in news_list]
-        news_message = (
-            f"📰 *Последние новости на {language.upper()} (категория: {category}):*\n\n"
-            + "\n\n".join(f"🔹 {news}" for news in translated_news)
-        )
-        await update.message.reply_text(news_message, parse_mode="Markdown")
+        for news_item in news_list:
+            translated_title = translate_text(news_item["title"], dest_language=language)
+            message_text = (
+                f"📰 *{translated_title}*\n\n"
+                f"🔗 [Читать подробнее]({news_item['url']})"
+            )
+            # Если есть изображение, добавляем его
+            if news_item["image"]:
+                await update.message.reply_photo(news_item["image"], caption=message_text, parse_mode="Markdown")
+            else:
+                await update.message.reply_text(message_text, parse_mode="Markdown")
     except Exception as e:
         print(f"Ошибка обработки новостей: {e}")
         await update.message.reply_text("❌ Произошла ошибка при обработке новостей. Попробуйте позже.")
+
 
 # Функция для обработки команды /help
 async def help_command(update, context):
